@@ -946,6 +946,40 @@ body::after {
 .foot-brand,.foot-gold,.foot-dev{display:none!important;}
 
 </style>
+
+<!-- ══ FIREBASE + WARD ACCESS CODE ══ -->
+<script>window.WARD_CODE = "1234";</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot }
+  from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyADEMUGSjrFxnfEWHSD4w9cXKFkJI-GUIY",
+  authDomain:        "ward-system-3c9ab.firebaseapp.com",
+  projectId:         "ward-system-3c9ab",
+  storageBucket:     "ward-system-3c9ab.firebasestorage.app",
+  messagingSenderId: "1094001045684",
+  appId:             "1:1094001045684:web:da28968b8fb5a99546e7e1"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+const REF = doc(db, "ward", "main");
+
+window._fbSave = async (doctors, patients) => {
+  try { await setDoc(REF, { doctors, patients }, { merge: false }); }
+  catch(e) { console.error("Firestore save:", e); }
+};
+
+window._fbListen = (callback) => {
+  onSnapshot(REF, snap => {
+    const d = snap.exists() ? snap.data() : {};
+    callback(d.doctors || [], d.patients || []);
+  }, err => console.error("Firestore error:", err));
+};
+</script>
+
 </head>
 <body>
 
@@ -1675,18 +1709,31 @@ window.onload = () => {
 };
 
 function loadData() {
+  // Load from localStorage as fallback first
   try {
     const d = localStorage.getItem('wms5_docs');
     const p = localStorage.getItem('wms5_pts');
     if (d) doctors  = JSON.parse(d);
     if (p) patients = JSON.parse(p);
-  } catch(e) { showToast('خطأ في التحميل','er'); }
+  } catch(e) {}
+  // Then listen to Firebase for real-time updates
+  if (window._fbListen) {
+    window._fbListen(function(docs, pts) {
+      doctors  = docs;
+      patients = pts;
+      renderAll();
+      updateStats();
+    });
+  }
 }
 function saveData() {
+  // Save to Firebase (online, real-time)
+  if (window._fbSave) window._fbSave(doctors, patients);
+  // Also keep localStorage as offline backup
   try {
     localStorage.setItem('wms5_docs', JSON.stringify(doctors));
     localStorage.setItem('wms5_pts',  JSON.stringify(patients));
-  } catch(e) { showToast('خطأ في الحفظ','er'); }
+  } catch(e) {}
 }
 
 function startClock() {
@@ -2586,5 +2633,87 @@ function showToast(msg, type='ok') {
   toastTimer = setTimeout(()=>t.classList.remove('show'), 3200);
 }
 </script>
+
+<!-- ══ WARD ACCESS OVERLAY ══ -->
+<div id="wardOverlay" style="
+  display:flex; position:fixed; inset:0; z-index:99999;
+  background:linear-gradient(135deg,#06080f 0%,#0e1220 100%);
+  align-items:center; justify-content:center;">
+  <div style="
+    background:rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:24px; padding:48px 40px;
+    max-width:380px; width:90%; text-align:center;
+    box-shadow:0 24px 80px rgba(0,0,0,0.5);">
+    <div style="font-size:52px;margin-bottom:14px;">🏥</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;
+      color:rgba(255,255,255,0.9);margin-bottom:6px;">WardMD</div>
+    <div style="font-size:10px;letter-spacing:3.5px;color:rgba(184,134,11,0.65);
+      text-transform:uppercase;margin-bottom:36px;">Ward Management System</div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.38);margin-bottom:14px;
+      font-family:'DM Sans',sans-serif;">أدخل كود الردهة للدخول</div>
+    <input id="wardCodeInput" type="password" placeholder="••••"
+      style="
+        width:100%;box-sizing:border-box;
+        padding:15px 18px;border-radius:14px;
+        border:1.5px solid rgba(255,255,255,0.1);
+        background:rgba(255,255,255,0.05);
+        color:#fff;font-size:26px;letter-spacing:10px;
+        text-align:center;outline:none;font-family:inherit;
+        transition:border-color .25s,box-shadow .25s;"
+      onkeydown="if(event.key==='Enter')checkWardCode()"
+      oninput="document.getElementById('wardCodeErr').style.opacity=0;
+               this.style.borderColor='rgba(255,255,255,0.1)';
+               this.style.boxShadow='none'"/>
+    <div id="wardCodeErr" style="
+      color:#f87171;font-size:12.5px;margin-top:10px;
+      opacity:0;transition:opacity .3s;min-height:20px;">
+      ❌ كود خاطئ — حاول مجدداً
+    </div>
+    <button onclick="checkWardCode()" style="
+      width:100%;margin-top:18px;padding:15px;
+      background:linear-gradient(135deg,#8c1515 0%,#6b0f0f 100%);
+      color:#fff;border:none;border-radius:14px;
+      font-size:15px;font-weight:600;cursor:pointer;
+      font-family:inherit;transition:opacity .2s,transform .15s;
+      box-shadow:0 6px 20px rgba(140,21,21,0.45);"
+      onmouseover="this.style.opacity='.85';this.style.transform='scale(1.01)'"
+      onmouseout="this.style.opacity='1';this.style.transform='scale(1)'">
+      دخول →
+    </button>
+  </div>
+</div>
+
+<script>
+function checkWardCode() {
+  var entered = document.getElementById('wardCodeInput').value;
+  if (entered === window.WARD_CODE) {
+    sessionStorage.setItem('wardAccess', window.WARD_CODE);
+    var ov = document.getElementById('wardOverlay');
+    ov.style.transition = 'opacity .45s ease';
+    ov.style.opacity = '0';
+    setTimeout(function(){ ov.style.display = 'none'; }, 460);
+  } else {
+    var errEl = document.getElementById('wardCodeErr');
+    errEl.style.opacity = '1';
+    var inp = document.getElementById('wardCodeInput');
+    inp.style.borderColor = '#f87171';
+    inp.style.boxShadow = '0 0 0 3px rgba(248,113,113,0.15)';
+    inp.value = '';
+    inp.focus();
+  }
+}
+(function() {
+  if (sessionStorage.getItem('wardAccess') === window.WARD_CODE) {
+    document.getElementById('wardOverlay').style.display = 'none';
+  } else {
+    setTimeout(function() {
+      var inp = document.getElementById('wardCodeInput');
+      if (inp) inp.focus();
+    }, 300);
+  }
+})();
+</script>
+
 </body>
 </html>
