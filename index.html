@@ -947,8 +947,22 @@ body::after {
 
 </style>
 
-<!-- ══ FIREBASE + WARD ACCESS CODE ══ -->
-<script>window.WARD_CODE = "1234";</script>
+<!-- ══ FIREBASE + 4-WARD SYSTEM ══ -->
+<script>
+window.WARD_CODES = {
+  ward1: "1111",
+  ward2: "2222",
+  ward3: "3333",
+  ward4: "4444"
+};
+window.WARD_NAMES = {
+  ward1: "الردهة الأولى",
+  ward2: "الردهة الثانية",
+  ward3: "الردهة الثالثة",
+  ward4: "الردهة الرابعة"
+};
+window.CURRENT_WARD = null;
+</script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, doc, setDoc, onSnapshot }
@@ -965,18 +979,20 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
-const REF = doc(db, "ward", "main");
 
-window._fbSave = async (doctors, patients) => {
-  try { await setDoc(REF, { doctors, patients }, { merge: false }); }
-  catch(e) { console.error("Firestore save:", e); }
-};
-
-window._fbListen = (callback) => {
-  onSnapshot(REF, snap => {
-    const d = snap.exists() ? snap.data() : {};
-    callback(d.doctors || [], d.patients || []);
-  }, err => console.error("Firestore error:", err));
+window._initWard = function(wardId) {
+  window.CURRENT_WARD = wardId;
+  const REF = doc(db, "wards", wardId);
+  window._fbSave = async (doctors, patients) => {
+    try { await setDoc(REF, { doctors, patients }, { merge: false }); }
+    catch(e) { console.error("Firestore save:", e); }
+  };
+  window._fbListen = (callback) => {
+    onSnapshot(REF, snap => {
+      const d = snap.exists() ? snap.data() : {};
+      callback(d.doctors || [], d.patients || []);
+    }, err => console.error("Firestore error:", err));
+  };
 };
 </script>
 
@@ -991,7 +1007,7 @@ window._fbListen = (callback) => {
       <div class="brand-seal"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" width="44" height="44" style="display:block;"><defs><radialGradient id="hBg" cx="38%" cy="32%" r="72%"><stop offset="0%" stop-color="#182040"/><stop offset="100%" stop-color="#06080f"/></radialGradient><linearGradient id="hCross" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffffff" stop-opacity="0.97"/><stop offset="100%" stop-color="#d4a832" stop-opacity="0.92"/></linearGradient><linearGradient id="hRing" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#e8c060"/><stop offset="50%" stop-color="#b8860b"/><stop offset="100%" stop-color="#c8960e"/></linearGradient><filter id="hGlow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><circle cx="22" cy="22" r="22" fill="url(#hBg)"/><circle cx="22" cy="22" r="20.5" fill="none" stroke="url(#hRing)" stroke-width="0.9" opacity="0.75"/><circle cx="22" cy="22" r="17" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.8"/><rect x="19" y="10" width="6" height="24" rx="1.8" fill="url(#hCross)" filter="url(#hGlow)"/><rect x="11" y="19" width="22" height="6" rx="1.8" fill="url(#hCross)" filter="url(#hGlow)"/></svg></div>
       <div class="brand-copy">
         <div class="brand-name">نظام إدارة الردهة الطبية</div>
-        <div class="brand-sub">Ward Management System · Dr. Mohammed Hamzah</div>
+        <div class="brand-sub">Ward Management System · Dr. Mohammed Hamzah</div><div id="wardBadge" style="font-size:11px;font-weight:700;color:var(--gd2);letter-spacing:1px;margin-top:2px;"></div>
       </div>
     </div>
     <div class="hdr-sep"></div>
@@ -1067,7 +1083,14 @@ window._fbListen = (callback) => {
     <div class="sec-div-line r"></div>
   </div>
 
-  <div id="docsWrap"></div>
+  <div id="recentAdmPanel" style="display:none;margin-bottom:18px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div style="font-size:10px;font-weight:700;color:var(--em);text-transform:uppercase;letter-spacing:1.5px">🆕 دخول حديث · Recent Admissions</div>
+    <button onclick="document.getElementById('recentAdmPanel').style.display='none'" style="background:none;border:none;color:var(--ink5);font-size:16px;cursor:pointer;padding:2px 6px">×</button>
+  </div>
+  <div id="recentAdmBody" style="background:var(--surface);border:1px solid var(--bd2);border-radius:14px;overflow:hidden"></div>
+</div>
+<div id="docsWrap"></div>
 </main>
 
 <!-- ══════════ MODAL: DOCTOR ══════════ -->
@@ -1369,6 +1392,21 @@ window._fbListen = (callback) => {
    LAB CATALOG — COMPREHENSIVE
 ══════════════════════════════════════════════════════ */
 const LAB_CATALOG = [
+  {
+    cat: '⭐ شائعة · Common Orders', ico: '⭐',
+    tests: [
+      {id:'cxr',        name:'CXR (Chest X-Ray)',                   ico:'🫁'},
+      {id:'cbc',        name:'CBC (Complete Blood Count)',           ico:'🩸', note:true, notePh:'Hgb, WBC, Plt…'},
+      {id:'rbs',        name:'RBS (Random Blood Sugar)',             ico:'🍬', note:true, notePh:'mg/dL'},
+      {id:'burea',      name:'B.Urea (Blood Urea)',                  ico:'🧪', note:true, notePh:'mg/dL'},
+      {id:'gue',        name:'GUE (General Urine Exam)',             ico:'🟡'},
+      {id:'gse',        name:'GSE (General Stool Exam)',             ico:'🟤'},
+      {id:'sgpt',       name:'SGPT / ALT',                          ico:'🫀', note:true, notePh:'U/L'},
+      {id:'creatinine', name:'Serum Creatinine',                     ico:'🧪', note:true, notePh:'mg/dL'},
+      {id:'sodium',     name:'Sodium (Na)',                          ico:'⚗️', note:true, notePh:'mEq/L'},
+      {id:'potassium',  name:'Potassium (K)',                        ico:'⚗️', note:true, notePh:'mEq/L'},
+    ]
+  },
   {
     cat: 'الدم الكامل · Hematology', ico: '🩸',
     tests: [
@@ -1701,38 +1739,73 @@ const MED_CATALOG = [
 ══════════════════════════════════════════════════════ */
 let doctors = [], patients = [], curPt = null;
 
+
+function showRecentAdmissions() {
+  var active = patients.filter(function(p){ return p.status !== 'discharged'; });
+  var recent = active.slice().sort(function(a,b){
+    return new Date(b.admDate||0) - new Date(a.admDate||0);
+  }).slice(0, 5);
+  if (!recent.length) return;
+  var html = recent.map(function(p) {
+    var d = p.admDate ? new Date(p.admDate) : null;
+    var timeStr = d ? (d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')) : '';
+    var statusColors = {admitted:'var(--sp)', stable:'var(--em)', critical:'var(--cr)'};
+    var statusNames  = {admitted:'قيد العلاج', stable:'مستقر', critical:'حرج'};
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--bd);last-child:border-none">'
+      +'<div style="min-width:32px;height:32px;border-radius:8px;background:var(--surface2);border:1px solid var(--bd2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--ink4);font-family:monospace">R'+p.room+'</div>'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+p.name+'</div>'
+      +'<div style="font-size:11px;color:var(--ink4)">'+( p.diag||'—')+'</div>'
+      +'</div>'
+      +'<div style="text-align:right;flex-shrink:0">'
+      +'<div style="font-size:10px;font-weight:700;color:'+(statusColors[p.status]||'var(--ink4)')+'">'+( statusNames[p.status]||p.status)+'</div>'
+      +'<div style="font-size:10px;color:var(--ink5)">'+timeStr+'</div>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+
+  document.getElementById('recentAdmBody').innerHTML = html;
+  var panel = document.getElementById('recentAdmPanel');
+  panel.style.display = 'block';
+  panel.style.animation = 'mIn .25s ease';
+}
+
 window.onload = () => {
-  loadData(); renderAll(); startClock();
+  startClock();
+  // Ward selection handles loadData
+};
+
+window._startApp = function() {
+  loadData();
+  renderAll();
   setInterval(cleanLabs, 60000);
   setInterval(()=>{ saveData(); }, 30000);
   cleanLabs();
+  // Update header badge
+  var badge = document.getElementById('wardBadge');
+  if (badge) badge.textContent = window.WARD_NAMES[window.CURRENT_WARD] || '';
 };
 
 function loadData() {
-  // Load from localStorage as fallback first
   try {
-    const d = localStorage.getItem('wms5_docs');
-    const p = localStorage.getItem('wms5_pts');
+    const d = localStorage.getItem('wms5_docs_'+window.CURRENT_WARD);
+    const p = localStorage.getItem('wms5_pts_'+window.CURRENT_WARD);
     if (d) doctors  = JSON.parse(d);
     if (p) patients = JSON.parse(p);
   } catch(e) {}
-  // Then listen to Firebase for real-time updates
   if (window._fbListen) {
     window._fbListen(function(docs, pts) {
       doctors  = docs;
       patients = pts;
       renderAll();
-      updateStats();
     });
   }
 }
 function saveData() {
-  // Save to Firebase (online, real-time)
   if (window._fbSave) window._fbSave(doctors, patients);
-  // Also keep localStorage as offline backup
   try {
-    localStorage.setItem('wms5_docs', JSON.stringify(doctors));
-    localStorage.setItem('wms5_pts',  JSON.stringify(patients));
+    localStorage.setItem('wms5_docs_'+window.CURRENT_WARD, JSON.stringify(doctors));
+    localStorage.setItem('wms5_pts_'+window.CURRENT_WARD,  JSON.stringify(patients));
   } catch(e) {}
 }
 
@@ -2305,6 +2378,7 @@ document.getElementById('fPt').addEventListener('submit', e => {
     notes:'', labs:{}, labsCheck:{}, labsDone:{}, labsTs:null, meds:{}, customMeds:''
   });
   saveData(); closeM('mPt'); e.target.reset(); insertPtRow(patients[patients.length-1]); updateStats();
+  showRecentAdmissions();
   showToast('تم إضافة المريض ✅','ok');
 });
 
@@ -2400,8 +2474,16 @@ function openDischarge(id) {
     +'<div><div class="disch-pt-name">'+p.name+'</div>'
     +'<div class="disch-pt-diag">'+(p.diag||'No diagnosis')+' · '+(doc?doc.name:'')+'</div></div>'
     +'</div>'
-    +'<div class="fg"><label class="fg-lbl">Discharge Note (اختياري)</label>'
-    +'<textarea class="fg-ta" id="dischNote" rows="3" placeholder="e.g. Stable, After evening meds, Follow-up in 2 weeks..."></textarea></div>'
+    +'<div class="fg"><label class="fg-lbl req">سبب الخروج · Discharge Reason</label>'
+    +'<div class="radio-row" style="flex-wrap:wrap;gap:8px;margin-bottom:4px">'
+    +'<label class="r-chip"><input type="radio" name="dischReason" value="exam" checked><span>🔍 بعد الفحص</span></label>'
+    +'<label class="r-chip"><input type="radio" name="dischReason" value="treatment"><span>💊 بعد العلاج</span></label>'
+    +'<label class="r-chip"><input type="radio" name="dischReason" value="request"><span>🙋 بطلب المريض</span></label>'
+    +'<label class="r-chip"><input type="radio" name="dischReason" value="transfer"><span>🚑 تحويل</span></label>'
+    +'<label class="r-chip"><input type="radio" name="dischReason" value="other"><span>📝 أخرى</span></label>'
+    +'</div></div>'
+    +'<div class="fg"><label class="fg-lbl">ملاحظات الخروج (اختياري)</label>'
+    +'<textarea class="fg-ta" id="dischNote" rows="3" placeholder="مثال: مستقر، متابعة بعد أسبوعين..."></textarea></div>'
     +'<div class="fg"><label class="fg-lbl">موعد الخروج</label>'
     +'<div class="disch-time-presets" id="dtpWrap">'
     +'<button class="dtp-btn" onclick="setDischTime(this,\'now\')">الآن</button>'
@@ -2428,12 +2510,16 @@ function confirmDischarge() {
   var p = patients.find(function(x){return x.id===_dischId;}); if(!p) return;
   var note = document.getElementById('dischNote').value.trim();
   var time = document.getElementById('dischTime').value;
+  var reasonEl = document.querySelector('input[name="dischReason"]:checked');
+  var reasonMap = {exam:'بعد الفحص',treatment:'بعد العلاج',request:'بطلب المريض',transfer:'تحويل',other:'أخرى'};
+  var reason = reasonEl ? (reasonMap[reasonEl.value]||reasonEl.value) : '';
   p.status='discharged';
   p.dischargeDate=new Date().toISOString();
+  p.dischargeReason=reason;
   if(note) p.dischargeNote=note;
   if(time) p.dischargeTime=time;
   saveData(); closeM('mDischarge'); renderAll();
-  showToast('تم تسجيل خروج '+p.name+(time?' في '+time:'')+' ✅','ok');
+  showToast('تم تسجيل خروج '+p.name+' · '+reason+(time?' في '+time:'')+' ✅','ok');
 }
 
 /* ════════════════════════════════════════════════════
@@ -2634,83 +2720,85 @@ function showToast(msg, type='ok') {
 }
 </script>
 
-<!-- ══ WARD ACCESS OVERLAY ══ -->
+<!-- ══ WARD SELECTION OVERLAY ══ -->
 <div id="wardOverlay" style="
   display:flex; position:fixed; inset:0; z-index:99999;
   background:linear-gradient(135deg,#06080f 0%,#0e1220 100%);
-  align-items:center; justify-content:center;">
-  <div style="
-    background:rgba(255,255,255,0.03);
-    border:1px solid rgba(255,255,255,0.08);
-    border-radius:24px; padding:48px 40px;
-    max-width:380px; width:90%; text-align:center;
-    box-shadow:0 24px 80px rgba(0,0,0,0.5);">
-    <div style="font-size:52px;margin-bottom:14px;">🏥</div>
-    <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;
-      color:rgba(255,255,255,0.9);margin-bottom:6px;">WardMD</div>
-    <div style="font-size:10px;letter-spacing:3.5px;color:rgba(184,134,11,0.65);
-      text-transform:uppercase;margin-bottom:36px;">Ward Management System</div>
-    <div style="font-size:13px;color:rgba(255,255,255,0.38);margin-bottom:14px;
-      font-family:'DM Sans',sans-serif;">أدخل كود الردهة للدخول</div>
-    <input id="wardCodeInput" type="password" placeholder="••••"
-      style="
-        width:100%;box-sizing:border-box;
-        padding:15px 18px;border-radius:14px;
-        border:1.5px solid rgba(255,255,255,0.1);
-        background:rgba(255,255,255,0.05);
-        color:#fff;font-size:26px;letter-spacing:10px;
-        text-align:center;outline:none;font-family:inherit;
-        transition:border-color .25s,box-shadow .25s;"
-      onkeydown="if(event.key==='Enter')checkWardCode()"
-      oninput="document.getElementById('wardCodeErr').style.opacity=0;
-               this.style.borderColor='rgba(255,255,255,0.1)';
-               this.style.boxShadow='none'"/>
-    <div id="wardCodeErr" style="
-      color:#f87171;font-size:12.5px;margin-top:10px;
-      opacity:0;transition:opacity .3s;min-height:20px;">
-      ❌ كود خاطئ — حاول مجدداً
+  align-items:center; justify-content:center; padding:20px;">
+
+  <!-- STEP 1: Ward Selection -->
+  <div id="stepSelect" style="width:100%;max-width:520px;text-align:center">
+    <div style="font-size:48px;margin-bottom:12px">🏥</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:4px">WardMD</div>
+    <div style="font-size:10px;letter-spacing:3px;color:rgba(184,134,11,0.6);text-transform:uppercase;margin-bottom:30px">اختر الردهة</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <button onclick="selectWard('ward1')" style="padding:20px 14px;background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.09);border-radius:16px;color:#fff;cursor:pointer;transition:all .2s;font-family:inherit;font-size:15px;font-weight:600" onmouseover="this.style.background='rgba(184,134,11,0.12)';this.style.borderColor='rgba(184,134,11,0.4)'" onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.09)'">
+        <div style="font-size:28px;margin-bottom:8px">🏨</div>
+        <div>الردهة الأولى</div>
+      </button>
+      <button onclick="selectWard('ward2')" style="padding:20px 14px;background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.09);border-radius:16px;color:#fff;cursor:pointer;transition:all .2s;font-family:inherit;font-size:15px;font-weight:600" onmouseover="this.style.background='rgba(184,134,11,0.12)';this.style.borderColor='rgba(184,134,11,0.4)'" onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.09)'">
+        <div style="font-size:28px;margin-bottom:8px">🏨</div>
+        <div>الردهة الثانية</div>
+      </button>
+      <button onclick="selectWard('ward3')" style="padding:20px 14px;background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.09);border-radius:16px;color:#fff;cursor:pointer;transition:all .2s;font-family:inherit;font-size:15px;font-weight:600" onmouseover="this.style.background='rgba(184,134,11,0.12)';this.style.borderColor='rgba(184,134,11,0.4)'" onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.09)'">
+        <div style="font-size:28px;margin-bottom:8px">🏨</div>
+        <div>الردهة الثالثة</div>
+      </button>
+      <button onclick="selectWard('ward4')" style="padding:20px 14px;background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.09);border-radius:16px;color:#fff;cursor:pointer;transition:all .2s;font-family:inherit;font-size:15px;font-weight:600" onmouseover="this.style.background='rgba(184,134,11,0.12)';this.style.borderColor='rgba(184,134,11,0.4)'" onmouseout="this.style.background='rgba(255,255,255,0.04)';this.style.borderColor='rgba(255,255,255,0.09)'">
+        <div style="font-size:28px;margin-bottom:8px">🏨</div>
+        <div>الردهة الرابعة</div>
+      </button>
     </div>
-    <button onclick="checkWardCode()" style="
-      width:100%;margin-top:18px;padding:15px;
-      background:linear-gradient(135deg,#8c1515 0%,#6b0f0f 100%);
-      color:#fff;border:none;border-radius:14px;
-      font-size:15px;font-weight:600;cursor:pointer;
-      font-family:inherit;transition:opacity .2s,transform .15s;
-      box-shadow:0 6px 20px rgba(140,21,21,0.45);"
-      onmouseover="this.style.opacity='.85';this.style.transform='scale(1.01)'"
-      onmouseout="this.style.opacity='1';this.style.transform='scale(1)'">
-      دخول →
-    </button>
+  </div>
+
+  <!-- STEP 2: Code Entry -->
+  <div id="stepCode" style="display:none;width:100%;max-width:360px;text-align:center">
+    <button onclick="document.getElementById('stepCode').style.display='none';document.getElementById('stepSelect').style.display='block'" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:13px;cursor:pointer;margin-bottom:20px;font-family:inherit">← رجوع</button>
+    <div id="wardSelectedName" style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:6px"></div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:24px">أدخل كود الردهة</div>
+    <input id="wardCodeInput" type="password" placeholder="••••"
+      style="width:100%;box-sizing:border-box;padding:15px;border-radius:14px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:26px;letter-spacing:10px;text-align:center;outline:none;font-family:inherit;transition:all .25s"
+      onkeydown="if(event.key==='Enter')checkWardCode()"
+      oninput="document.getElementById('wardCodeErr').style.opacity=0;this.style.borderColor='rgba(255,255,255,0.1)'"/>
+    <div id="wardCodeErr" style="color:#f87171;font-size:12px;margin-top:8px;opacity:0;transition:opacity .3s;min-height:18px">❌ كود خاطئ</div>
+    <button onclick="checkWardCode()" style="width:100%;margin-top:16px;padding:14px;background:linear-gradient(135deg,#8c1515,#6b0f0f);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 6px 20px rgba(140,21,21,0.4)">دخول →</button>
   </div>
 </div>
 
 <script>
+var _selectedWard = null;
+function selectWard(wardId) {
+  _selectedWard = wardId;
+  document.getElementById('stepSelect').style.display = 'none';
+  document.getElementById('stepCode').style.display = 'block';
+  document.getElementById('wardSelectedName').textContent = window.WARD_NAMES[wardId];
+  document.getElementById('wardCodeInput').value = '';
+  document.getElementById('wardCodeErr').style.opacity = 0;
+  setTimeout(function(){ document.getElementById('wardCodeInput').focus(); }, 100);
+}
 function checkWardCode() {
   var entered = document.getElementById('wardCodeInput').value;
-  if (entered === window.WARD_CODE) {
-    sessionStorage.setItem('wardAccess', window.WARD_CODE);
+  if (entered === window.WARD_CODES[_selectedWard]) {
+    sessionStorage.setItem('wardId', _selectedWard);
+    window._initWard(_selectedWard);
     var ov = document.getElementById('wardOverlay');
-    ov.style.transition = 'opacity .45s ease';
+    ov.style.transition = 'opacity .4s';
     ov.style.opacity = '0';
-    setTimeout(function(){ ov.style.display = 'none'; }, 460);
+    setTimeout(function(){ ov.style.display = 'none'; window._startApp(); }, 420);
   } else {
-    var errEl = document.getElementById('wardCodeErr');
-    errEl.style.opacity = '1';
+    document.getElementById('wardCodeErr').style.opacity = '1';
     var inp = document.getElementById('wardCodeInput');
     inp.style.borderColor = '#f87171';
-    inp.style.boxShadow = '0 0 0 3px rgba(248,113,113,0.15)';
-    inp.value = '';
-    inp.focus();
+    inp.value = ''; inp.focus();
   }
 }
-(function() {
-  if (sessionStorage.getItem('wardAccess') === window.WARD_CODE) {
-    document.getElementById('wardOverlay').style.display = 'none';
-  } else {
-    setTimeout(function() {
-      var inp = document.getElementById('wardCodeInput');
-      if (inp) inp.focus();
-    }, 300);
+(function(){
+  var saved = sessionStorage.getItem('wardId');
+  if (saved && window.WARD_CODES[saved]) {
+    window._initWard(saved);
+    var ov = document.getElementById('wardOverlay');
+    if (ov) ov.style.display = 'none';
+    setTimeout(function(){ window._startApp(); }, 100);
   }
 })();
 </script>
