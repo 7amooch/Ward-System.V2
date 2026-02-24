@@ -947,135 +947,39 @@ body::after {
 
 </style>
 
-<!-- WARD SYSTEM + FIREBASE -->
+<!-- ══ FIREBASE + 4-WARD SYSTEM ══ -->
 <script>
-window.WARD_CODES = {ward1:"1111",ward2:"2222",ward3:"3333",ward4:"4444"};
-window.WARD_NAMES = {ward1:"الردهة الأولى",ward2:"الردهة الثانية",ward3:"الردهة الثالثة",ward4:"الردهة الرابعة"};
+window.WARD_CODES = { ward1:"1111", ward2:"2222", ward3:"3333", ward4:"4444" };
+window.WARD_NAMES = { ward1:"الردهة الأولى", ward2:"الردهة الثانية", ward3:"الردهة الثالثة", ward4:"الردهة الرابعة" };
 window.CURRENT_WARD = null;
-window._activityLog  = [];
-window._lastLogCount = 0;
-window._mySessionId  = (Math.random().toString(36)+Math.random().toString(36)).slice(2,12);
-window._audioReady   = false;
-document.addEventListener('click', function(){ window._audioReady = true; }, {once:true, capture:true});
-
-window.playChime = function(type) {
-  if (!window._audioReady) return;
-  try {
-    var ctx = new (window.AudioContext||window.webkitAudioContext)();
-    if (ctx.state==='suspended') ctx.resume();
-    var seqs = {
-      admit:    [[523.25,0],[659.25,.15],[783.99,.30],[1046.50,.45]],
-      discharge:[[523.25,0],[466.16,.18],[392.00,.36]],
-      note:     [[659.25,0],[783.99,.15]],
-      labs:     [[783.99,0],[659.25,.15]]
-    };
-    var seq = seqs[type]||seqs.admit;
-    seq.forEach(function(pair){
-      var freq=pair[0], delay=pair[1];
-      [1,2].forEach(function(mult){
-        var o=ctx.createOscillator(), g=ctx.createGain();
-        o.connect(g); g.connect(ctx.destination);
-        o.type='sine'; o.frequency.value=freq*mult;
-        var vol = mult===1 ? 0.20 : 0.06;
-        var t = ctx.currentTime+delay;
-        g.gain.setValueAtTime(0,t);
-        g.gain.linearRampToValueAtTime(vol,t+0.04);
-        g.gain.exponentialRampToValueAtTime(0.0001,t+1.0);
-        o.start(t); o.stop(t+1.0);
-      });
-    });
-  } catch(e){}
-};
-
-window.showWardNotification = function(entry) {
-  try {
-    window.playChime(entry.type);
-    var ico   = {admit:'🟢',discharge:'🔴',labs:'🔬',meds:'💊',note:'📝'}[entry.type]||'📌';
-    var label = {admit:'دخول جديد',discharge:'خروج مريض',labs:'تحاليل',meds:'دواء',note:'ملاحظة'}[entry.type]||'تحديث';
-    var bg    = {admit:'#0d5c3a',discharge:'#8c1515',labs:'#4c1d95',meds:'#1a3a6b',note:'#78350f'}[entry.type]||'#1e293b';
-    var stack = document.querySelectorAll('[id^="wn_"]');
-    if (stack.length>=4) { if(stack[stack.length-1]) stack[stack.length-1].remove(); }
-    var el = document.createElement('div');
-    el.id  = 'wn_'+Date.now();
-    var top = 18 + document.querySelectorAll('[id^="wn_"]').length * 102;
-    el.style.cssText = 'position:fixed;top:'+top+'px;right:18px;z-index:99990;'
-      +'background:'+bg+';color:#fff;border-radius:18px;padding:14px 16px 14px 14px;'
-      +'display:flex;align-items:flex-start;gap:12px;'
-      +'box-shadow:0 10px 40px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.1);'
-      +'max-width:310px;min-width:240px;transform:translateX(360px);opacity:0;'
-      +'transition:all 0.42s cubic-bezier(0.34,1.56,0.64,1);'
-      +'border:1px solid rgba(255,255,255,0.14);backdrop-filter:blur(8px);';
-    el.innerHTML =
-      '<div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.18);'
-      +'display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">'+ico+'</div>'
-      +'<div style="flex:1;min-width:0">'
-      +'<div style="font-size:9.5px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.65;margin-bottom:4px">'
-      +(window.WARD_NAMES[entry.ward]||'الردهة')+' · '+label+'</div>'
-      +'<div style="font-size:15px;font-weight:700;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+entry.patientName+'</div>'
-      +'<div style="font-size:11px;opacity:0.72;display:flex;gap:8px;flex-wrap:wrap;">'
-      +'<span>🏥 غرفة '+entry.room+'</span>'
-      +(entry.note?'<span style="overflow:hidden;max-width:150px;text-overflow:ellipsis;white-space:nowrap;">'+entry.note+'</span>':'')
-      +'</div></div>'
-      +'<button onclick="this.closest('[id^=wn_]').remove()" style="background:rgba(255,255,255,0.2);'
-      +'border:none;color:#fff;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:12px;'
-      +'flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0;">✕</button>';
-    document.body.appendChild(el);
-    requestAnimationFrame(function(){requestAnimationFrame(function(){
-      el.style.transform='translateX(0)';el.style.opacity='1';
-    });});
-    var dot = document.getElementById('actLogDot');
-    if (dot) dot.style.display='block';
-    setTimeout(function(){
-      el.style.transform='translateX(360px)';el.style.opacity='0';
-      setTimeout(function(){if(el.parentElement)el.remove();},500);
-    },7000);
-  } catch(e){ console.warn('notif:',e); }
-};
 </script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, doc, setDoc, onSnapshot, updateDoc, arrayUnion }
-  from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-const _fc = {
-  apiKey:"AIzaSyADEMUGSjrFxnfEWHSD4w9cXKFkJI-GUIY",
-  authDomain:"ward-system-3c9ab.firebaseapp.com",
-  projectId:"ward-system-3c9ab",
-  storageBucket:"ward-system-3c9ab.firebasestorage.app",
-  messagingSenderId:"1094001045684",
-  appId:"1:1094001045684:web:da28968b8fb5a99546e7e1"
+import { getFirestore, doc, setDoc, onSnapshot, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+const firebaseConfig = {
+  apiKey:"AIzaSyADEMUGSjrFxnfEWHSD4w9cXKFkJI-GUIY",authDomain:"ward-system-3c9ab.firebaseapp.com",
+  projectId:"ward-system-3c9ab",storageBucket:"ward-system-3c9ab.firebasestorage.app",
+  messagingSenderId:"1094001045684",appId:"1:1094001045684:web:da28968b8fb5a99546e7e1"
 };
-const _app = initializeApp(_fc);
-const _db  = getFirestore(_app);
-window._initWard = function(wardId){
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+window._initWard = function(wardId) {
   window.CURRENT_WARD = wardId;
-  const REF = doc(_db,"wards",wardId);
-  window._fbSave = async (docs,pts) => {
-    try { await setDoc(REF,{doctors:docs,patients:pts},{merge:true}); } catch(e){ console.error("save:",e); }
+  const REF = doc(db, "wards", wardId);
+  window._fbSave = async (doctors, patients) => {
+    try { await setDoc(REF, { doctors, patients }, { merge: true }); } catch(e) { console.error(e); }
+  };
+  window._fbListen = (callback) => {
+    onSnapshot(REF, snap => {
+      const d = snap.exists() ? snap.data() : {};
+      callback(d.doctors||[], d.patients||[], d.activityLog||[]);
+    }, err => console.error(err));
   };
   window._fbLogActivity = async (entry) => {
-    try { await updateDoc(REF,{activityLog:arrayUnion(entry)}); }
-    catch(e){ try{ await setDoc(REF,{activityLog:[entry]},{merge:true}); }catch(_){} }
-  };
-  window._fbListen = (cb) => {
-    onSnapshot(REF, snap => {
-      try {
-        const d = snap.exists() ? snap.data() : {};
-        const rawLog = d.activityLog||[];
-        // newest-first
-        const newLog = rawLog.slice().sort(function(a,b){return new Date(b.time)-new Date(a.time);});
-        if (window._lastLogCount > 0 && newLog.length > window._lastLogCount) {
-          var diff = newLog.length - window._lastLogCount;
-          for (var i=diff-1; i>=0; i--) {
-            var e = newLog[i];
-            if (e && e.sessionId !== window._mySessionId && window.showWardNotification) {
-              window.showWardNotification(e);
-            }
-          }
-        }
-        window._lastLogCount = newLog.length;
-        cb(d.doctors||[], d.patients||[], newLog);
-      } catch(err){ console.error("listen:",err); }
-    }, err=>console.error("snap:",err));
+    try { await updateDoc(REF, { activityLog: arrayUnion(entry) }); }
+    catch(e) {
+      try { await setDoc(REF, { activityLog: [entry] }, { merge: true }); } catch(e2){}
+    }
   };
 };
 </script>
@@ -1091,19 +995,14 @@ window._initWard = function(wardId){
       <div class="brand-seal"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" width="44" height="44" style="display:block;"><defs><radialGradient id="hBg" cx="38%" cy="32%" r="72%"><stop offset="0%" stop-color="#182040"/><stop offset="100%" stop-color="#06080f"/></radialGradient><linearGradient id="hCross" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffffff" stop-opacity="0.97"/><stop offset="100%" stop-color="#d4a832" stop-opacity="0.92"/></linearGradient><linearGradient id="hRing" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#e8c060"/><stop offset="50%" stop-color="#b8860b"/><stop offset="100%" stop-color="#c8960e"/></linearGradient><filter id="hGlow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><circle cx="22" cy="22" r="22" fill="url(#hBg)"/><circle cx="22" cy="22" r="20.5" fill="none" stroke="url(#hRing)" stroke-width="0.9" opacity="0.75"/><circle cx="22" cy="22" r="17" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.8"/><rect x="19" y="10" width="6" height="24" rx="1.8" fill="url(#hCross)" filter="url(#hGlow)"/><rect x="11" y="19" width="22" height="6" rx="1.8" fill="url(#hCross)" filter="url(#hGlow)"/></svg></div>
       <div class="brand-copy">
         <div class="brand-name">نظام إدارة الردهة الطبية</div>
-        <div class="brand-sub">Ward Management System · Dr. Mohammed Hamzah</div>
-      <div id="wardBadge" style="font-size:11px;font-weight:700;color:var(--gd2);letter-spacing:1px;margin-top:2px;min-height:14px;"></div>
+        <div class="brand-sub">Ward Management System · Dr. Mohammed Hamzah</div><div id="wardBadge" style="font-size:11px;font-weight:700;color:var(--gd2);letter-spacing:1px;margin-top:2px;"></div>
       </div>
     </div>
     <div class="hdr-sep"></div>
     <div class="hdr-actions">
-      <button class="hdr-icon-btn" onclick="openNewAdmissions()" title="الدخولات الجديدة اليوم" style="position:relative">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-        <span id="newAdmCount" style="display:none;position:absolute;top:-4px;right:-5px;min-width:16px;height:16px;background:var(--em);color:#fff;border-radius:10px;font-size:8px;font-weight:800;align-items:center;justify-content:center;border:2px solid var(--surface);padding:0 3px;line-height:14px;"></span>
-      </button>
       <button class="hdr-icon-btn" onclick="openActivityLog()" title="سجل النشاط" style="position:relative">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        <span id="actLogDot" style="display:none;position:absolute;top:3px;right:3px;width:7px;height:7px;background:var(--cr);border-radius:50%;border:1.5px solid var(--surface);"></span>
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <span id="actLogDot" style="display:none;position:absolute;top:3px;right:3px;width:6px;height:6px;background:var(--cr);border-radius:50%;border:1.5px solid var(--surface)"></span>
       </button>
       <button class="hdr-icon-btn" onclick="exportData()" title="تصدير البيانات">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -1176,15 +1075,12 @@ window._initWard = function(wardId){
     <div class="sec-div-line r"></div>
   </div>
 
-  <div id="newAdmBanner" style="display:none;margin-bottom:14px;background:linear-gradient(to right,rgba(13,92,58,0.07),rgba(26,58,107,0.07));border:1px solid rgba(13,92,58,0.2);border-radius:14px;overflow:hidden;">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px 0 14px;">
-    <div style="font-size:10px;font-weight:700;color:var(--em);text-transform:uppercase;letter-spacing:1.5px;">🆕 دخولات جديدة اليوم</div>
-    <div style="display:flex;gap:6px;align-items:center;">
-      <button onclick="openNewAdmissions()" style="font-size:11px;font-weight:600;color:var(--sp);background:none;border:none;cursor:pointer;font-family:inherit;padding:2px 6px;">عرض كامل ←</button>
-      <button onclick="document.getElementById('newAdmBanner').style.display='none'" style="background:none;border:none;color:var(--ink5);font-size:18px;cursor:pointer;padding:0 4px;line-height:1;">×</button>
-    </div>
+  <div id="recentAdmPanel" style="display:none;margin-bottom:18px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div style="font-size:10px;font-weight:700;color:var(--em);text-transform:uppercase;letter-spacing:1.5px">🆕 دخول حديث</div>
+    <button onclick="document.getElementById('recentAdmPanel').style.display='none'" style="background:none;border:none;color:var(--ink5);font-size:18px;cursor:pointer;padding:0 4px;line-height:1">×</button>
   </div>
-  <div id="newAdmBannerBody" style="padding:8px 8px 10px 8px;"></div>
+  <div id="recentAdmBody" style="background:var(--surface);border:1px solid var(--bd2);border-radius:14px;overflow:hidden"></div>
 </div>
 <div id="docsWrap"></div>
 </main>
@@ -1373,18 +1269,15 @@ window._initWard = function(wardId){
       <div class="fs"><div class="fs-v" id="fDocs">0</div><div class="fs-l">Physicians</div></div>
     </div>
     <div style="
-  font-family:'Cormorant Garamond',Georgia,serif;
-  font-size:17px;
+  font-family:'Cormorant Garamond',serif;
+  font-size:15px;
   font-style:italic;
-  background:linear-gradient(135deg,#c9952a,#f0c060,#b8860b);
-  -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent;
-  background-clip:text;
+  color:rgba(255,255,255,0.28);
   letter-spacing:0.5px;
-  margin-bottom:26px;
+  margin-bottom:22px;
   text-align:center;
-  line-height:1.8;
-  max-width:360px;
+  line-height:1.6;
+  max-width:340px;
 ">
   "A man will die,<br>but not his idea."
 </div>
@@ -1504,20 +1397,18 @@ window._initWard = function(wardId){
    LAB CATALOG — COMPREHENSIVE
 ══════════════════════════════════════════════════════ */
 const LAB_CATALOG = [
-  { cat:'⭐ شائعة · Common Orders', ico:'⭐',
-    tests:[
-      {id:'cxr',        name:'CXR (Chest X-Ray)',           ico:'🫁'},
-      {id:'cbc',        name:'CBC (Complete Blood Count)',   ico:'🩸', note:true, notePh:'Hgb / WBC / Plt'},
-      {id:'rbs',        name:'RBS (Random Blood Sugar)',     ico:'🍬', note:true, notePh:'mg/dL'},
-      {id:'burea',      name:'B.Urea (Blood Urea)',          ico:'🧪', note:true, notePh:'mg/dL'},
-      {id:'gue',        name:'GUE (General Urine Exam)',     ico:'🟡'},
-      {id:'gse',        name:'GSE (General Stool Exam)',     ico:'🟤'},
-      {id:'sgpt',       name:'SGPT / ALT',                   ico:'🫀', note:true, notePh:'U/L'},
-      {id:'creatinine', name:'Serum Creatinine',             ico:'🧪', note:true, notePh:'mg/dL'},
-      {id:'sodium',     name:'Sodium (Na+)',                 ico:'⚗️', note:true, notePh:'mEq/L'},
-      {id:'potassium',  name:'Potassium (K+)',               ico:'⚗️', note:true, notePh:'mEq/L'},
-    ]
-  },
+  { cat:'⭐ شائعة · Common Orders', ico:'⭐', tests:[
+    {id:'cxr',  name:'CXR (Chest X-Ray)',          ico:'🫁'},
+    {id:'cbc',  name:'CBC (Complete Blood Count)',  ico:'🩸', note:true, notePh:'Hgb, WBC, Plt…'},
+    {id:'rbs',  name:'RBS (Random Blood Sugar)',    ico:'🍬', note:true, notePh:'mg/dL'},
+    {id:'burea',name:'B.Urea (Blood Urea)',         ico:'🧪', note:true, notePh:'mg/dL'},
+    {id:'gue',  name:'GUE (General Urine Exam)',    ico:'🟡'},
+    {id:'gse',  name:'GSE (General Stool Exam)',    ico:'🟤'},
+    {id:'sgpt', name:'SGPT / ALT',                  ico:'🫀', note:true, notePh:'U/L'},
+    {id:'creatinine',name:'Serum Creatinine',       ico:'🧪', note:true, notePh:'mg/dL'},
+    {id:'sodium',    name:'Sodium (Na)',             ico:'⚗️', note:true, notePh:'mEq/L'},
+    {id:'potassium', name:'Potassium (K)',           ico:'⚗️', note:true, notePh:'mEq/L'},
+  ]},
   {
     cat: 'الدم الكامل · Hematology', ico: '🩸',
     tests: [
@@ -1850,48 +1741,130 @@ const MED_CATALOG = [
 ══════════════════════════════════════════════════════ */
 let doctors = [], patients = [], curPt = null;
 
-window.onload = () => { startClock(); };
 
+// ════════════════════════════════════════════════════
+//  ACTIVITY LOG
+// ════════════════════════════════════════════════════
+window._activityLog = [];
+
+function logActivity(type, patientName, room, note) {
+  var entry = {
+    type: type,
+    patientName: patientName,
+    room: room,
+    note: note||'',
+    time: new Date().toISOString(),
+    ward: window.CURRENT_WARD||'ward1'
+  };
+  window._activityLog = window._activityLog||[];
+  window._activityLog.unshift(entry);
+  if (window._activityLog.length > 100) window._activityLog = window._activityLog.slice(0,100);
+  if (window._fbLogActivity) window._fbLogActivity(entry);
+  renderActivityLog();
+}
+
+function timeAgo(isoStr) {
+  if (!isoStr) return '';
+  var diff = Math.floor((Date.now() - new Date(isoStr)) / 1000);
+  if (diff < 60)   return diff + ' ث';
+  if (diff < 3600) return Math.floor(diff/60) + ' د';
+  if (diff < 86400)return Math.floor(diff/3600) + ' س';
+  return Math.floor(diff/86400) + ' يوم';
+}
+
+function timeSince(isoStr) {
+  if (!isoStr) return '—';
+  var diff = Math.floor((Date.now() - new Date(isoStr)) / 1000);
+  if (diff < 3600) return Math.floor(diff/60) + ' دقيقة';
+  if (diff < 86400){
+    var h = Math.floor(diff/3600);
+    var m = Math.floor((diff%3600)/60);
+    return h + ' ساعة' + (m>0?' و'+m+' د':'');
+  }
+  var d = Math.floor(diff/86400);
+  var h2 = Math.floor((diff%86400)/3600);
+  return d + ' يوم' + (h2>0?' و'+h2+' ساعة':'');
+}
+
+function renderActivityLog() {
+  var el = document.getElementById('actLogBody');
+  if (!el) return;
+  var log = (window._activityLog||[]).slice(0,30);
+  if (!log.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--ink5);font-size:13px">لا يوجد نشاط بعد</div>';
+    return;
+  }
+  var typeIco = {admit:'🟢', discharge:'🔴', labs:'🔬', meds:'💊', note:'📝', vitals:'📊', edit:'✏️'};
+  var typeLbl = {admit:'دخول', discharge:'خروج', labs:'تحاليل', meds:'دواء', note:'ملاحظة', vitals:'علامات', edit:'تعديل'};
+  el.innerHTML = log.map(function(e) {
+    return '<div style="display:flex;align-items:flex-start;gap:11px;padding:11px 16px;border-bottom:1px solid var(--bd)">'
+      +'<div style="font-size:18px;margin-top:1px">'+(typeIco[e.type]||'📌')+'</div>'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +'<span style="font-size:13.5px;font-weight:600;color:var(--ink)">'+e.patientName+'</span>'
+      +'<span style="font-size:10px;font-weight:700;background:var(--surface2);border:1px solid var(--bd2);border-radius:6px;padding:2px 7px;color:var(--ink4)">R'+e.room+'</span>'
+      +'<span style="font-size:10.5px;font-weight:600;color:'+(e.type==='admit'?'var(--em)':e.type==='discharge'?'var(--cr)':'var(--sp)')+'">'+( typeLbl[e.type]||e.type)+'</span>'
+      +'</div>'
+      +(e.note?'<div style="font-size:11.5px;color:var(--ink4);margin-top:3px">'+e.note+'</div>':'')
+      +'</div>'
+      +'<div style="font-size:10px;color:var(--ink5);white-space:nowrap;flex-shrink:0;margin-top:2px">'+timeAgo(e.time)+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function showRecentAdmissions() {
+  var active = patients.filter(function(p){ return p.status!=='discharged'; });
+  var recent = active.slice().sort(function(a,b){ return new Date(b.admDate||0)-new Date(a.admDate||0); }).slice(0,5);
+  if (!recent.length) return;
+  var html = recent.map(function(p) {
+    var stc = {admitted:'var(--sp)',stable:'var(--em)',critical:'var(--cr)'};
+    var stn = {admitted:'قيد العلاج',stable:'مستقر',critical:'حرج'};
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--bd)">'
+      +'<div style="min-width:32px;height:32px;border-radius:8px;background:var(--surface2);border:1px solid var(--bd2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--ink4);font-family:monospace">R'+p.room+'</div>'
+      +'<div style="flex:1;min-width:0">'
+      +'<div style="font-size:13px;font-weight:600;color:var(--ink)">'+p.name+'</div>'
+      +'<div style="font-size:11px;color:var(--ink4)">'+(p.diag||'—')+'</div>'
+      +'</div>'
+      +'<div style="text-align:right;flex-shrink:0">'
+      +'<div style="font-size:10px;font-weight:700;color:'+(stc[p.status]||'var(--ink4)')+'">'+( stn[p.status]||p.status)+'</div>'
+      +'<div style="font-size:10px;color:var(--ink5)">منذ '+timeSince(p.admDate)+'</div>'
+      +'</div></div>';
+  }).join('');
+  document.getElementById('recentAdmBody').innerHTML = html;
+  var panel = document.getElementById('recentAdmPanel');
+  panel.style.display = 'block';
+}
+
+window.onload = () => { startClock(); };
 window._startApp = function() {
-  window._activityLog  = [];
-  window._lastLogCount = 0;
-  loadData();
-  renderAll();
+  window._activityLog = window._activityLog||[];
+  loadData(); renderAll();
   setInterval(cleanLabs, 60000);
   setInterval(function(){ saveData(); }, 30000);
   cleanLabs();
-  try {
-    var b = document.getElementById('wardBadge');
-    if (b) b.textContent = window.WARD_NAMES[window.CURRENT_WARD]||'';
-  } catch(e){}
-  try { renderNewAdmissions(); } catch(e){}
+  var b=document.getElementById('wardBadge');
+  if(b) b.textContent = window.WARD_NAMES[window.CURRENT_WARD]||'';
 };
 
 function loadData() {
   try {
-    var d = localStorage.getItem('wms5_docs_'+(window.CURRENT_WARD||'ward1'));
-    var p = localStorage.getItem('wms5_pts_'+(window.CURRENT_WARD||'ward1'));
-    if (d) doctors  = JSON.parse(d);
-    if (p) patients = JSON.parse(p);
+    const d = localStorage.getItem('wms5_docs_'+window.CURRENT_WARD);
+    const p = localStorage.getItem('wms5_pts_'+window.CURRENT_WARD);
+    if (d) doctors = JSON.parse(d); if (p) patients = JSON.parse(p);
   } catch(e) {}
   if (window._fbListen) {
     window._fbListen(function(docs, pts, log) {
-      doctors  = docs;
-      patients = pts;
+      doctors = docs; patients = pts;
       window._activityLog = log||[];
-      renderAll();
-      try { renderActivityLog(); }   catch(e) {}
-      try { renderNewAdmissions(); } catch(e) {}
+      renderAll(); renderActivityLog();
     });
   }
 }
 function saveData() {
-  try { if (window._fbSave) window._fbSave(doctors, patients); } catch(e){}
+  if (window._fbSave) window._fbSave(doctors, patients);
   try {
-    var _wk = 'wms5_docs_'+(window.CURRENT_WARD||'ward1');
-    var _pk = 'wms5_pts_'+(window.CURRENT_WARD||'ward1');
-    localStorage.setItem(_wk, JSON.stringify(doctors));
-    localStorage.setItem(_pk, JSON.stringify(patients));
+    localStorage.setItem('wms5_docs_'+window.CURRENT_WARD, JSON.stringify(doctors));
+    localStorage.setItem('wms5_pts_'+window.CURRENT_WARD,  JSON.stringify(patients));
   } catch(e) {}
 }
 
@@ -2154,33 +2127,8 @@ function toggleNotes(id) {
 
 function saveNote(id) {
   const p = patients.find(x=>x.id===id); if (!p) return;
-  p.notes = document.querySelector(`#na-${id} textarea`).value.trim();
-  saveData();
-  // Update card indicator without re-rendering everything
-  try {
-    const pr = document.getElementById('pr-'+id);
-    if (pr) {
-      pr.classList.remove('nc','nb','nl');
-      const hasChart = !!(p.notes && p.notes.trim());
-      const labKeys  = p.labs ? Object.keys(p.labs).filter(k=>p.labs[k]) : [];
-      if (hasChart && labKeys.length) pr.classList.add('nb');
-      else if (hasChart)              pr.classList.add('nc');
-      else if (labKeys.length)        pr.classList.add('nl');
-      // Add CHART flag if missing
-      let existingFlag = pr.querySelector('.flag-chart');
-      const ptRight = pr.querySelector('.pt-right');
-      if (hasChart && !existingFlag && ptRight) {
-        const f = document.createElement('div');
-        f.className = 'flag-chart';
-        f.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><path d="M9 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8L14 2H9z"/><path d="M14 2v6h6"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>CHART';
-        ptRight.prepend(f);
-      } else if (!hasChart && existingFlag) {
-        existingFlag.remove();
-      }
-    }
-  } catch(err){}
-  showToast('تم حفظ الملاحظة ✅','ok');
-  try { logActivity('note', p.name, p.room, p.notes.substring(0,50)+(p.notes.length>50?'…':'')); } catch(e){}
+  p.notes = document.querySelector(`#na-${id} textarea`).value;
+  saveData(); renderAll(); showToast('تم الحفظ ✅','ok');
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2488,10 +2436,10 @@ document.getElementById('fPt').addEventListener('submit', e => {
     admDate: new Date().toISOString(),
     notes:'', labs:{}, labsCheck:{}, labsDone:{}, labsTs:null, meds:{}, customMeds:''
   });
-  const _newPt = patients[patients.length-1];
-  try { logActivity('admit', _newPt.name, _newPt.room, _newPt.diag||''); } catch(e){}
-  saveData(); closeM('mPt'); e.target.reset(); insertPtRow(_newPt); updateStats();
-  try { renderNewAdmissions(); } catch(e){}
+  var _np = patients[patients.length-1];
+  logActivity('admit', _np.name, _np.room, (_np.diag||'')+((_np.status&&_np.status!=='admitted')?' · '+_np.status:''));
+  saveData(); closeM('mPt'); e.target.reset(); insertPtRow(_np); updateStats();
+  showRecentAdmissions();
   showToast('تم إضافة المريض ✅','ok');
 });
 
@@ -2587,14 +2535,14 @@ function openDischarge(id) {
     +'<div><div class="disch-pt-name">'+p.name+'</div>'
     +'<div class="disch-pt-diag">'+(p.diag||'No diagnosis')+' · '+(doc?doc.name:'')+'</div></div>'
     +'</div>'
-    +'<div class="fg"><label class="fg-lbl req" style="margin-bottom:8px">سبب الخروج</label>'
-    +'<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px">'
+    +'<div class="fg"><label class="fg-lbl req">سبب الخروج</label>'
+    +'<div class="radio-row" style="flex-wrap:wrap;gap:8px">'
     +'<label class="r-chip"><input type="radio" name="dischReason" value="exam" checked><span>🔍 بعد الفحص</span></label>'
     +'<label class="r-chip"><input type="radio" name="dischReason" value="treatment"><span>💊 بعد العلاج</span></label>'
     +'<label class="r-chip"><input type="radio" name="dischReason" value="request"><span>🙋 بطلب المريض</span></label>'
     +'<label class="r-chip"><input type="radio" name="dischReason" value="transfer"><span>🚑 تحويل</span></label>'
     +'</div></div>'
-    +'<div class="fg"><label class="fg-lbl">ملاحظات الخروج (اختياري)</label>'
+    +'<div class="fg"><label class="fg-lbl">ملاحظات (اختياري)</label>'
     +'<textarea class="fg-ta" id="dischNote" rows="3" placeholder="مثال: مستقر، متابعة بعد أسبوعين..."></textarea></div>'
     +'<div class="fg"><label class="fg-lbl">موعد الخروج</label>'
     +'<div class="disch-time-presets" id="dtpWrap">'
@@ -2620,17 +2568,15 @@ function setDischTime(btn, val) {
 }
 function confirmDischarge() {
   var p = patients.find(function(x){return x.id===_dischId;}); if(!p) return;
-  var note   = document.getElementById('dischNote').value.trim();
-  var time   = document.getElementById('dischTime').value;
-  var rEl    = document.querySelector('input[name="dischReason"]:checked');
-  var rMap   = {exam:'بعد الفحص',treatment:'بعد العلاج',request:'بطلب المريض',transfer:'تحويل'};
+  var note = document.getElementById('dischNote').value.trim();
+  var time = document.getElementById('dischTime').value;
+  var rEl = document.querySelector('input[name="dischReason"]:checked');
+  var rMap = {exam:'بعد الفحص',treatment:'بعد العلاج',request:'بطلب المريض',transfer:'تحويل'};
   var reason = rEl ? (rMap[rEl.value]||rEl.value) : 'خروج';
-  p.status        = 'discharged';
-  p.dischargeDate = new Date().toISOString();
-  p.dischargeReason = reason;
-  if (note) p.dischargeNote = note;
-  if (time) p.dischargeTime = time;
-  try { logActivity('discharge', p.name, p.room, reason+(note?' · '+note.substring(0,40):'')); } catch(e){}
+  p.status='discharged'; p.dischargeDate=new Date().toISOString();
+  p.dischargeReason=reason;
+  if(note) p.dischargeNote=note; if(time) p.dischargeTime=time;
+  logActivity('discharge', p.name, p.room, reason + (note?' · '+note:''));
   saveData(); closeM('mDischarge'); renderAll();
   showToast('تم تسجيل خروج '+p.name+' · '+reason+' ✅','ok');
 }
@@ -2833,311 +2779,119 @@ function showToast(msg, type='ok') {
 }
 </script>
 
-
-<!-- ══ MAIN EXTENSION JS ══ -->
-<script>
-// ── helpers ─────────────────────────────────────────────────────
-function timeAgo(iso) {
-  try {
-    var s = Math.floor((Date.now() - new Date(iso)) / 1000);
-    if (s < 60)    return s + 'ث';
-    if (s < 3600)  return Math.floor(s/60) + 'د';
-    if (s < 86400) return Math.floor(s/3600) + 'س';
-    return Math.floor(s/86400) + 'ي';
-  } catch(e){ return ''; }
-}
-function timeSince(iso) {
-  try {
-    var s = Math.floor((Date.now() - new Date(iso)) / 1000);
-    if (s < 60)    return (Math.floor(s/60)||1) + ' دقيقة';
-    if (s < 3600)  return Math.floor(s/60) + ' دقيقة';
-    if (s < 86400) {
-      var h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
-      return h + ' ساعة' + (m ? ' و'+m+'د' : '');
-    }
-    var d = Math.floor(s/86400), h2 = Math.floor((s%86400)/3600);
-    return d + ' يوم' + (h2 ? ' و'+h2+'س' : '');
-  } catch(e){ return '—'; }
-}
-
-// ── activity log ─────────────────────────────────────────────────
-function logActivity(type, patientName, room, note) {
-  try {
-    var entry = {
-      type: type,
-      patientName: patientName,
-      room: String(room),
-      note: (note||'').substring(0,80),
-      time: new Date().toISOString(),
-      ward: window.CURRENT_WARD||'ward1',
-      sessionId: window._mySessionId||'x'
-    };
-    window._activityLog = window._activityLog||[];
-    window._activityLog.unshift(entry);
-    if (window._activityLog.length > 120) window._activityLog = window._activityLog.slice(0,120);
-    if (window._fbLogActivity) window._fbLogActivity(entry).catch(function(){});
-    try { renderActivityLog(); }   catch(e){}
-    try { renderNewAdmissions(); } catch(e){}
-    if (window.showWardNotification) window.showWardNotification(entry);
-  } catch(e){ console.warn('logActivity:', e); }
-}
-
-function renderActivityLog() {
-  var el = document.getElementById('actLogBody');
-  if (!el) return;
-  var log = (window._activityLog||[]).slice(0, 50);
-  if (!log.length) {
-    el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--ink5);font-size:13px;">لا يوجد نشاط بعد</div>';
-    return;
-  }
-  var ico = {admit:'🟢', discharge:'🔴', labs:'🔬', meds:'💊', note:'📝', edit:'✏️'};
-  var lbl = {admit:'دخول', discharge:'خروج', labs:'تحاليل', meds:'دواء', note:'ملاحظة', edit:'تعديل'};
-  var clr = {admit:'var(--em)', discharge:'var(--cr)', labs:'var(--sp)', meds:'var(--sp)', note:'#b45309', edit:'var(--ink4)'};
-  el.innerHTML = log.map(function(e){
-    return '<div style="display:flex;align-items:flex-start;gap:11px;padding:11px 16px;border-bottom:1px solid var(--bd);">'
-      + '<div style="font-size:18px;flex-shrink:0;margin-top:1px;">'+(ico[e.type]||'📌')+'</div>'
-      + '<div style="flex:1;min-width:0;">'
-      + '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">'
-      + '<span style="font-size:13px;font-weight:600;color:var(--ink);">'+e.patientName+'</span>'
-      + '<span style="font-size:10px;background:var(--surface2);border:1px solid var(--bd2);border-radius:5px;padding:1px 6px;color:var(--ink4);">R'+e.room+'</span>'
-      + '<span style="font-size:10.5px;font-weight:700;color:'+(clr[e.type]||'var(--ink4)')+';">'+( lbl[e.type]||e.type)+'</span>'
-      + '</div>'
-      + (e.note ? '<div style="font-size:11.5px;color:var(--ink4);margin-top:3px;line-height:1.5;">'+e.note+'</div>' : '')
-      + '</div>'
-      + '<div style="font-size:10px;color:var(--ink5);white-space:nowrap;flex-shrink:0;margin-top:2px;">'+timeAgo(e.time)+'</div>'
-      + '</div>';
-  }).join('');
-}
-
-// ── new admissions ───────────────────────────────────────────────
-function renderNewAdmissions() {
-  try {
-    var banner = document.getElementById('newAdmBanner');
-    var body   = document.getElementById('newAdmBannerBody');
-    if (!body) return;
-    var now   = Date.now();
-    var today = patients.filter(function(p){
-      return p.status !== 'discharged' && p.admDate && (now - new Date(p.admDate)) < 86400000;
-    }).sort(function(a,b){ return new Date(b.admDate) - new Date(a.admDate); });
-    if (!today.length) { if (banner) banner.style.display = 'none'; return; }
-    if (banner) banner.style.display = 'block';
-    var stc = {admitted:'var(--sp)', stable:'var(--em)', critical:'var(--cr)'};
-    body.innerHTML = today.slice(0,6).map(function(p){
-      var doc = doctors.find(function(d){ return d.id === p.doctorId; });
-      return '<div style="display:inline-flex;align-items:center;gap:8px;margin:4px;padding:7px 12px;'
-        + 'background:var(--surface);border:1px solid var(--bd2);border-radius:12px;vertical-align:top;">'
-        + '<div style="font-size:10px;font-weight:800;color:var(--ink4);font-family:monospace;">R'+p.room+'</div>'
-        + '<div style="min-width:0;">'
-        + '<div style="font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap;">'+p.name+'</div>'
-        + (doc ? '<div style="font-size:10px;color:var(--sp);font-weight:600;">د. '+(doc.name||'')+'</div>' : '')
-        + '</div>'
-        + '<div style="font-size:9.5px;font-weight:700;color:'+(stc[p.status]||'var(--ink4)')+';">⏱'+timeSince(p.admDate)+'</div>'
-        + '</div>';
-    }).join('');
-    var cnt = document.getElementById('newAdmCount');
-    if (cnt) { cnt.textContent = today.length; cnt.style.display = today.length ? 'flex' : 'none'; }
-  } catch(e){ console.warn('renderNewAdm:', e); }
-}
-
-function openNewAdmissions() {
-  try {
-    var now   = Date.now();
-    var today = patients.filter(function(p){
-      return p.status !== 'discharged' && p.admDate && (now - new Date(p.admDate)) < 86400000;
-    }).sort(function(a,b){ return new Date(b.admDate) - new Date(a.admDate); });
-    // group by doctor
-    var groups = {}, order = [];
-    today.forEach(function(p){
-      var doc = doctors.find(function(d){ return d.id === p.doctorId; });
-      var key = doc ? (doc.name||'غير محدد') : 'غير محدد';
-      if (!groups[key]) { groups[key] = []; order.push(key); }
-      groups[key].push(p);
-    });
-    var stc = {admitted:'var(--sp)', stable:'var(--em)', critical:'var(--cr)'};
-    var stn = {admitted:'قيد العلاج', stable:'مستقر', critical:'حرج'};
-    var html = order.map(function(docName){
-      var pts = groups[docName];
-      return '<div style="margin-bottom:20px;">'
-        + '<div style="font-size:10px;font-weight:700;color:var(--sp);text-transform:uppercase;'
-        + 'letter-spacing:1.5px;padding:0 0 8px;border-bottom:1px solid var(--bd);margin-bottom:10px;'
-        + 'display:flex;align-items:center;gap:8px;">'
-        + '👨‍⚕️ د. '+docName
-        + '<span style="background:var(--sp);color:#fff;border-radius:10px;padding:1px 8px;font-size:9px;">'+pts.length+' مرضى</span>'
-        + '</div>'
-        + pts.map(function(p){
-          return '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;'
-            + 'background:var(--surface2);border:1px solid var(--bd2);border-radius:12px;margin-bottom:8px;">'
-            + '<div style="min-width:34px;height:34px;border-radius:8px;background:var(--surface);'
-            + 'border:1px solid var(--bd2);display:flex;align-items:center;justify-content:center;'
-            + 'font-size:11px;font-weight:800;color:var(--sp);font-family:monospace;">R'+p.room+'</div>'
-            + '<div style="flex:1;min-width:0;">'
-            + '<div style="font-size:13.5px;font-weight:600;color:var(--ink);">'+p.name+'</div>'
-            + '<div style="font-size:11px;color:var(--ink4);">'+(p.diag||'—')+'</div>'
-            + '</div>'
-            + '<div style="text-align:right;flex-shrink:0;">'
-            + '<div style="font-size:10.5px;font-weight:700;color:'+(stc[p.status]||'var(--ink4)')+';">'+(stn[p.status]||p.status)+'</div>'
-            + '<div style="font-size:10px;color:var(--ink5);">⏱ '+timeSince(p.admDate)+'</div>'
-            + '</div></div>';
-        }).join('')
-        + '</div>';
-    }).join('');
-    document.getElementById('newAdmModalBody').innerHTML = html ||
-      '<div style="text-align:center;padding:40px 20px;color:var(--ink5);">لا توجد دخولات جديدة اليوم</div>';
-    document.getElementById('mNewAdm').classList.add('show');
-  } catch(e){ console.warn('openNewAdm:', e); }
-}
-
-function openActivityLog() {
-  try {
-    var active = patients.filter(function(p){ return p.status !== 'discharged'; });
-    var stayEl = document.getElementById('actLogStay');
-    if (stayEl) {
-      if (!active.length) {
-        stayEl.innerHTML = '<div style="font-size:12px;color:var(--ink5);padding:4px 0;">لا يوجد مرضى حالياً</div>';
-      } else {
-        var sorted = active.slice().sort(function(a,b){ return new Date(a.admDate||0) - new Date(b.admDate||0); });
-        var stc = {admitted:'var(--sp)', stable:'var(--em)', critical:'var(--cr)'};
-        stayEl.innerHTML = sorted.map(function(p){
-          return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
-            + '<div style="min-width:26px;height:26px;border-radius:6px;background:var(--surface2);'
-            + 'border:1px solid var(--bd2);display:flex;align-items:center;justify-content:center;'
-            + 'font-size:9px;font-weight:800;color:var(--ink4);font-family:monospace;">R'+p.room+'</div>'
-            + '<div style="flex:1;font-size:12px;font-weight:600;color:var(--ink);">'+p.name+'</div>'
-            + '<div style="font-size:11px;font-weight:600;color:'+(stc[p.status]||'var(--ink4)')+';">⏱ '+timeSince(p.admDate)+'</div>'
-            + '</div>';
-        }).join('');
-      }
-    }
-    renderActivityLog();
-    var dot = document.getElementById('actLogDot');
-    if (dot) dot.style.display = 'none';
-    document.getElementById('mActLog').classList.add('show');
-  } catch(e){ console.warn('openActLog:', e); }
-}
-</script>
-
-<!-- ══ WARD SELECTOR OVERLAY ══ -->
-<div id="wardOverlay" style="display:flex;position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#06080f 0%,#0e1220 100%);align-items:center;justify-content:center;padding:20px;">
-  <!-- Step 1: pick ward -->
-  <div id="stepSelect" style="width:100%;max-width:500px;text-align:center;">
-    <div style="font-size:52px;margin-bottom:14px;">🏥</div>
-    <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:28px;font-weight:700;color:rgba(255,255,255,0.92);margin-bottom:4px;">WardMD</div>
-    <div style="font-size:10px;letter-spacing:3.5px;color:rgba(184,134,11,0.65);text-transform:uppercase;margin-bottom:30px;">اختر الردهة للدخول</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <button onclick="selectWard('ward1')" class="_wbtn"><div style="font-size:28px;margin-bottom:8px;">🏨</div>الردهة الأولى</button>
-      <button onclick="selectWard('ward2')" class="_wbtn"><div style="font-size:28px;margin-bottom:8px;">🏨</div>الردهة الثانية</button>
-      <button onclick="selectWard('ward3')" class="_wbtn"><div style="font-size:28px;margin-bottom:8px;">🏨</div>الردهة الثالثة</button>
-      <button onclick="selectWard('ward4')" class="_wbtn"><div style="font-size:28px;margin-bottom:8px;">🏨</div>الردهة الرابعة</button>
-    </div>
-  </div>
-  <!-- Step 2: enter code -->
-  <div id="stepCode" style="display:none;width:100%;max-width:360px;text-align:center;">
-    <button onclick="document.getElementById('stepCode').style.display='none';document.getElementById('stepSelect').style.display='block';" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:13px;cursor:pointer;margin-bottom:22px;font-family:inherit;">← رجوع</button>
-    <div id="wardSelectedName" style="font-family:'Cormorant Garamond',Georgia,serif;font-size:24px;font-weight:700;color:rgba(255,255,255,0.92);margin-bottom:6px;"></div>
-    <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:24px;">أدخل كود الردهة</div>
-    <input id="wardCodeInput" type="password" maxlength="10" placeholder="••••"
-      style="width:100%;box-sizing:border-box;padding:15px;border-radius:14px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:28px;letter-spacing:12px;text-align:center;outline:none;font-family:inherit;transition:all .25s;"
-      onkeydown="if(event.key==='Enter')checkWardCode();"
-      oninput="document.getElementById('wardCodeErr').style.opacity=0;this.style.borderColor='rgba(255,255,255,0.1)';"/>
-    <div id="wardCodeErr" style="color:#f87171;font-size:12px;margin-top:10px;opacity:0;transition:opacity .3s;min-height:18px;">❌ كود خاطئ — حاول مجدداً</div>
-    <button onclick="checkWardCode()" style="width:100%;margin-top:18px;padding:15px;background:linear-gradient(135deg,#8c1515,#6b0f0f);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 6px 22px rgba(140,21,21,0.5);">دخول ←</button>
-  </div>
-</div>
-
-<!-- ══ NEW ADMISSIONS MODAL ══ -->
-<div id="mNewAdm" class="modal-wrap">
-  <div class="modal" style="max-width:560px;">
-    <div class="modal-hdr">
-      <div class="m-ico mi-em">🆕</div>
-      <div class="m-title">الدخولات الجديدة · مجمّعة بالطبيب</div>
-      <button class="m-close" onclick="closeM('mNewAdm')">✕</button>
-    </div>
-    <div class="m-body" id="newAdmModalBody" style="max-height:68vh;overflow-y:auto;padding:18px;"></div>
-  </div>
-</div>
-
 <!-- ══ ACTIVITY LOG MODAL ══ -->
 <div id="mActLog" class="modal-wrap">
-  <div class="modal" style="max-width:500px;">
+  <div class="modal" style="max-width:520px">
     <div class="modal-hdr">
       <div class="m-ico mi-sp">📋</div>
       <div class="m-title">سجل النشاط · Activity Log</div>
       <button class="m-close" onclick="closeM('mActLog')">✕</button>
     </div>
-    <div class="m-body" style="padding:0;">
-      <div style="padding:14px 18px;background:var(--surface2);border-bottom:1px solid var(--bd);">
-        <div style="font-size:10px;font-weight:700;color:var(--ink4);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">⏱ مدة الإقامة الحالية</div>
+    <div class="m-body" style="padding:0">
+      <!-- Active Patients Summary -->
+      <div style="padding:14px 18px;background:var(--surface2);border-bottom:1px solid var(--bd)">
+        <div style="font-size:10px;font-weight:700;color:var(--ink4);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">⏱ مدة الإقامة · Length of Stay</div>
         <div id="actLogStay"></div>
       </div>
-      <div id="actLogBody" style="max-height:380px;overflow-y:auto;"></div>
+      <div id="actLogBody" style="max-height:400px;overflow-y:auto"></div>
     </div>
   </div>
 </div>
 
-<!-- ══ WARD SYSTEM STYLES ══ -->
+<script>
+function openActivityLog() {
+  // Render stay summary
+  var active = patients.filter(function(p){ return p.status!=='discharged'; });
+  var stayEl = document.getElementById('actLogStay');
+  if (!active.length) {
+    stayEl.innerHTML = '<div style="font-size:12px;color:var(--ink5);text-align:center;padding:4px">لا يوجد مرضى حالياً</div>';
+  } else {
+    stayEl.innerHTML = active.slice().sort(function(a,b){ return new Date(a.admDate||0)-new Date(b.admDate||0); }).map(function(p) {
+      var stc = {admitted:'var(--sp)',stable:'var(--em)',critical:'var(--cr)'};
+      return '<div style="display:flex;align-items:center;gap:9px;margin-bottom:7px">'
+        +'<div style="min-width:28px;height:28px;border-radius:7px;background:var(--surface);border:1px solid var(--bd2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--ink4);font-family:monospace">R'+p.room+'</div>'
+        +'<div style="flex:1;font-size:12.5px;font-weight:600;color:var(--ink)">'+p.name+'</div>'
+        +'<div style="font-size:11px;color:'+(stc[p.status]||'var(--ink4)')+';font-weight:600">⏱ '+timeSince(p.admDate)+'</div>'
+        +'</div>';
+    }).join('');
+  }
+  renderActivityLog();
+  document.getElementById('actLogDot').style.display = 'none';
+  document.getElementById('mActLog').classList.add('show');
+}
+</script>
+
+
+<!-- ══ WARD SELECTION OVERLAY ══ -->
+<div id="wardOverlay" style="display:flex;position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#06080f 0%,#0e1220 100%);align-items:center;justify-content:center;padding:20px">
+  <div id="stepSelect" style="width:100%;max-width:500px;text-align:center">
+    <div style="font-size:48px;margin-bottom:12px">🏥</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:4px">WardMD</div>
+    <div style="font-size:10px;letter-spacing:3px;color:rgba(184,134,11,0.6);text-transform:uppercase;margin-bottom:28px">اختر الردهة</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <button onclick="selectWard('ward1')" class="_wbtn">
+        <div style="font-size:28px;margin-bottom:8px">🏨</div><div>الردهة الأولى</div>
+      </button>
+      <button onclick="selectWard('ward2')" class="_wbtn">
+        <div style="font-size:28px;margin-bottom:8px">🏨</div><div>الردهة الثانية</div>
+      </button>
+      <button onclick="selectWard('ward3')" class="_wbtn">
+        <div style="font-size:28px;margin-bottom:8px">🏨</div><div>الردهة الثالثة</div>
+      </button>
+      <button onclick="selectWard('ward4')" class="_wbtn">
+        <div style="font-size:28px;margin-bottom:8px">🏨</div><div>الردهة الرابعة</div>
+      </button>
+    </div>
+  </div>
+  <div id="stepCode" style="display:none;width:100%;max-width:360px;text-align:center">
+    <button onclick="document.getElementById('stepCode').style.display='none';document.getElementById('stepSelect').style.display='block'" style="background:none;border:none;color:rgba(255,255,255,0.4);font-size:13px;cursor:pointer;margin-bottom:20px;font-family:inherit">← رجوع</button>
+    <div id="wardSelectedName" style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:6px"></div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-bottom:24px">أدخل كود الردهة</div>
+    <input id="wardCodeInput" type="password" placeholder="••••" style="width:100%;box-sizing:border-box;padding:15px;border-radius:14px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);color:#fff;font-size:26px;letter-spacing:10px;text-align:center;outline:none;font-family:inherit;transition:all .25s" onkeydown="if(event.key==='Enter')checkWardCode()" oninput="document.getElementById('wardCodeErr').style.opacity=0;this.style.borderColor='rgba(255,255,255,0.1)'"/>
+    <div id="wardCodeErr" style="color:#f87171;font-size:12px;margin-top:8px;opacity:0;transition:opacity .3s;min-height:18px">❌ كود خاطئ</div>
+    <button onclick="checkWardCode()" style="width:100%;margin-top:16px;padding:14px;background:linear-gradient(135deg,#8c1515,#6b0f0f);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 6px 20px rgba(140,21,21,0.4)">دخول →</button>
+  </div>
+</div>
+
 <style>
-._wbtn {
-  padding:20px 14px;
-  background:rgba(255,255,255,0.04);
-  border:1.5px solid rgba(255,255,255,0.09);
-  border-radius:18px;
-  color:#fff;cursor:pointer;
-  font-family:inherit;font-size:15px;font-weight:600;
-  transition:all .22s;
-  display:block;width:100%;
-}
-._wbtn:hover {
-  background:rgba(184,134,11,0.14);
-  border-color:rgba(184,134,11,0.45);
-  transform:translateY(-2px);
-}
+._wbtn{padding:20px 14px;background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.09);border-radius:16px;color:#fff;cursor:pointer;font-family:inherit;font-size:15px;font-weight:600;transition:all .2s}
+._wbtn:hover{background:rgba(184,134,11,0.12);border-color:rgba(184,134,11,0.4)}
 </style>
 
-<!-- ══ WARD SELECTOR LOGIC ══ -->
 <script>
-var _selWard = null;
-
-function selectWard(w) {
-  _selWard = w;
+var _selectedWard = null;
+function selectWard(wardId) {
+  _selectedWard = wardId;
   document.getElementById('stepSelect').style.display = 'none';
-  document.getElementById('stepCode').style.display   = 'block';
-  document.getElementById('wardSelectedName').textContent = window.WARD_NAMES[w]||w;
+  document.getElementById('stepCode').style.display = 'block';
+  document.getElementById('wardSelectedName').textContent = window.WARD_NAMES[wardId];
   document.getElementById('wardCodeInput').value = '';
   document.getElementById('wardCodeErr').style.opacity = 0;
-  setTimeout(function(){ document.getElementById('wardCodeInput').focus(); }, 120);
+  setTimeout(function(){ document.getElementById('wardCodeInput').focus(); }, 100);
 }
-
 function checkWardCode() {
-  var v = document.getElementById('wardCodeInput').value;
-  if (!_selWard || !window.WARD_CODES) return;
-  if (v === window.WARD_CODES[_selWard]) {
-    sessionStorage.setItem('wardId', _selWard);
-    window._initWard(_selWard);
+  var entered = document.getElementById('wardCodeInput').value;
+  if (entered === window.WARD_CODES[_selectedWard]) {
+    sessionStorage.setItem('wardId', _selectedWard);
+    window._initWard(_selectedWard);
     var ov = document.getElementById('wardOverlay');
-    ov.style.transition = 'opacity .45s';
+    ov.style.transition = 'opacity .4s';
     ov.style.opacity = '0';
-    setTimeout(function(){
-      ov.style.display = 'none';
-      window._startApp();
-    }, 460);
+    setTimeout(function(){ ov.style.display = 'none'; window._startApp(); }, 420);
   } else {
     document.getElementById('wardCodeErr').style.opacity = '1';
     var inp = document.getElementById('wardCodeInput');
     inp.style.borderColor = '#f87171';
-    inp.value = '';
-    inp.focus();
+    inp.value = ''; inp.focus();
   }
 }
-
-// Auto-login if same session
 (function(){
-  var s = sessionStorage.getItem('wardId');
-  if (s && window.WARD_CODES && window.WARD_CODES[s]) {
-    window._initWard(s);
+  var saved = sessionStorage.getItem('wardId');
+  if (saved && window.WARD_CODES && window.WARD_CODES[saved]) {
+    window._initWard(saved);
     var ov = document.getElementById('wardOverlay');
     if (ov) ov.style.display = 'none';
-    // Wait for Firebase module to initialize
-    setTimeout(function(){ window._startApp(); }, 200);
+    setTimeout(function(){ window._startApp(); }, 150);
   }
 })();
 </script>
